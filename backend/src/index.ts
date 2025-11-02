@@ -1,13 +1,33 @@
 import { Client } from "pg";
+import express from "express";
+import dotenv from "dotenv";
 
-const pgClient = new Client(
-  "postgresql://neondb_owner:npg_eCFgp6SZ7wyD@ep-late-lab-a4406ohb-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-);
+dotenv.config();
+const app = express();
+
+app.use(express.json());
+
+const pgClient = new Client(process.env.POSTGRES_URL);
 
 async function main() {
   await pgClient.connect();
-  const response = await pgClient.query("Select * from users");
-  console.log(response);
 }
 
-main();
+app.post("/signup", async (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
+
+  const insertQuery = `Insert into users (name, password) values ($1, $2) returning id;`;
+
+  const addUser = await pgClient.query(insertQuery, [email, password]);
+
+  res.json({
+    message: "Registered",
+    id: addUser,
+  });
+});
+
+app.listen(3000, async () => {
+  main();
+  console.log("Server started");
+});
